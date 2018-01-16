@@ -1,3 +1,1 @@
-Hello, Gophers! How are you!?
-
-Adding a line to things!
+Hello, Gophers!
