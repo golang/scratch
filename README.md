@@ -1,4 +1,4 @@
-# Scratch Repository
+# Scratch Repository 🐱
 
 This repository is mainly for use by people learning how to use Gerrit and
 contribute to Go.
