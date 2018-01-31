@@ -1,1 +1,2 @@
 := <-- it’s a gopher!
+That's not a gopher, this is a Gopher: https://golang.org/doc/gopher/frontpage.png
