@@ -7,5 +7,5 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("Come to GopherCon Brasil! From Nov 16th to 18th. https://gopherconbr.org/en")
+	fmt.Println("Come to GopherCon Brasil 2018! From Sep 27th to 29th. https://gopherconbr.org/en")
 }
