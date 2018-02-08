@@ -37,7 +37,7 @@ to the server. Then in the Gerrit UI, find the in-line comments left by your
 reviewer, click "Done", go back to the main PR page, and click "Reply" => "Send"
 to tell your reviewer that you've addressed your feedback.
 
-Once you get a "Code-Review: +2" from a Go contributor, your change will be
+Once you get a ` Code-Review: +2 ` from a Go contributor, your change will be
 merged!
 
 ## Need help?
