@@ -5,6 +5,10 @@
 // This tool proclaims the ruliness of tools.
 package main
 
+import (
+	"fmt"
+)
+
 func main() {
 	fmt.Println("Tools Rule!")
 }
