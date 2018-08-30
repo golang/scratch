@@ -8,5 +8,5 @@ import "fmt"
 
 func main() {
 	fmt.Println(`"A little nonsense now and then, is cherished by the wisest men."
---Roald Dhal`)
+--Roald Dahl`)
 }
