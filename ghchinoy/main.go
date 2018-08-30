@@ -7,5 +7,5 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("I'm contributing to Go! (well, kinda :)")
+	fmt.Println("I'm totally contributing to Go! (well, kinda :)")
 }
