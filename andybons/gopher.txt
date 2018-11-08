@@ -1,2 +1,4 @@
 := <-- it’s a gopher!
 That's not a gopher, this is a Gopher: https://golang.org/doc/gopher/frontpage.png
+
+\ʕ◔ϖ◔ʔ/ <-- another wild gopher appears
