@@ -5,6 +5,6 @@
 package main
 
 func main() {
-	println("cc")
+	println("dd")
 	greeting()
 }
