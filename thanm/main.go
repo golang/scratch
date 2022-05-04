@@ -4,19 +4,6 @@
 
 package main
 
-func quote3() {
-	println("MY SENSORS INDICATE TRACE AMOUNTS OF CHOCOLATE IN THE PANTRY.  PLEASE LOAD")
-	println("SOME IN MY SCOOP FOR ANALYSIS.")
-	println("No, you'll spoil your appetite.")
-	println("MY MISSION MUST NOT FAIL.  PREPARE FOR ANNIHILATION, PITIFUL EARTH FEMALE.")
-	println()
-}
-
-func quote4() {
-	println("Never send a bunny to do a duck's job.")
-	println()
-}
-
 func main() {
 	quote1()
 	quote2()
