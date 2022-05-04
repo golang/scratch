@@ -4,16 +4,6 @@
 
 package main
 
-func quote1() {
-	println("Obfuscate the pancakes!")
-	println()
-}
-
-func quote2() {
-	println("From the label of a secure disk: Nemo me impune accessit")
-	println()
-}
-
 func quote3() {
 	println("MY SENSORS INDICATE TRACE AMOUNTS OF CHOCOLATE IN THE PANTRY.  PLEASE LOAD")
 	println("SOME IN MY SCOOP FOR ANALYSIS.")
