@@ -315,7 +315,7 @@ func main() {
 	outp = puts(outp, []byte(id))
 
 	// emit hashes
-	_, err = f.Seek(0, os.SEEK_SET)
+	_, err = f.Seek(0, io.SeekStart)
 	if err != nil {
 		panic(err)
 	}
