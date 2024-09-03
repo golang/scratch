@@ -1,6 +1,6 @@
 module golang.org/x/scratch/cherry/testtiming
 
-go 1.23
+go 1.22
 
 require (
 	go.chromium.org/luci v0.0.0-20240716011143-b5eb7a221b66
