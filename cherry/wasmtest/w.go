@@ -19,8 +19,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/tetratelabs/wazero"
@@ -50,6 +52,9 @@ func J(x int32) {
 	println("J", x, "end")
 }
 
+var errbuf bytes.Buffer
+var stderr = io.MultiWriter(os.Stderr, &errbuf)
+
 func main() {
 	ctx := context.Background()
 
@@ -71,7 +76,7 @@ func main() {
 	}
 
 	config := wazero.NewModuleConfig().
-		WithStdout(os.Stdout).WithStderr(os.Stderr).
+		WithStdout(os.Stdout).WithStderr(stderr).
 		WithStartFunctions() // don't call _start
 
 	wasi_snapshot_preview1.MustInstantiate(ctx, r)
@@ -117,12 +122,32 @@ func main() {
 	}
 
 	// Library mode.
-	entry = m.ExportedFunction("_initialize")
+	fmt.Println("Libaray mode: call export before initialization")
+	shouldPanic(func() { I() })
+	// reset module
+	m, err = r.InstantiateWithConfig(ctx, buf, config)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println("Library mode: initialize")
+	entry = m.ExportedFunction("_initialize")
 	_, err = entry.Call(ctx)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("\nLibrary mode: call export functions")
 	I()
+}
+
+func shouldPanic(f func()) {
+	defer func() {
+		e := recover()
+		if e == nil {
+			panic("did not panic")
+		}
+		if !bytes.Contains(errbuf.Bytes(), []byte("runtime: wasmexport function called before runtime initialization")) {
+			panic("expected error message missing")
+		}
+	}()
+	f()
 }
