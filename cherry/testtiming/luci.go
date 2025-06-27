@@ -285,7 +285,12 @@ func (c *LUCIClient) ReadBoard(ctx context.Context, dash *Dashboard, builder str
 				var commit, goCommit string
 				prop := b.GetOutput().GetProperties().GetFields()
 				for _, s := range prop["sources"].GetListValue().GetValues() {
-					x := s.GetStructValue().GetFields()["gitilesCommit"].GetStructValue().GetFields()
+					fm := s.GetStructValue().GetFields()
+					gc := fm["gitilesCommit"]
+					if gc == nil {
+						gc = fm["gitiles_commit"]
+					}
+					x := gc.GetStructValue().GetFields()
 					c := x["id"].GetStringValue()
 					switch repo := x["project"].GetStringValue(); repo {
 					case dash.Repo:
@@ -293,13 +298,14 @@ func (c *LUCIClient) ReadBoard(ctx context.Context, dash *Dashboard, builder str
 					case "go":
 						goCommit = c
 					default:
-						log.Fatalf("repo mismatch: %s %s %s", repo, dash.Repo, buildURL(id))
+						log.Printf("repo mismatch: %s %s %s", repo, dash.Repo, buildURL(id))
 					}
 				}
 				if commit == "" {
 					switch b.GetStatus() {
 					case bbpb.Status_SUCCESS:
-						log.Fatalf("empty commit: %s", buildURL(id))
+						log.Printf("empty commit: %s", buildURL(id))
+						fallthrough
 					default:
 						// unfinished build, or infra failure, ignore
 						continue
