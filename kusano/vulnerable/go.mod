@@ -1,4 +1,4 @@
-module golang.org/vuln
+module golang.org/vulnerable
 
 go 1.18
 
