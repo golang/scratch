@@ -1,4 +1,4 @@
-module golang.org/vulnerable
+module golang.org/x/scratch/kusano/vulnerable
 
 go 1.18
 
