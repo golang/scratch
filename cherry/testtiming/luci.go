@@ -4,6 +4,14 @@
 
 // An ad-hoc tool to query test timing data from LUCI.
 //
+// Usage:
+//
+//	go run luci.go [-repo repo] [-branch branch] [-builder builder] -test pkg.TestName
+//
+// Example:
+//
+//	go run luci.go -builder gotip-linux-amd64 -test math/big.TestFloatSqrt
+//
 // Output CSV with the following columns:
 //
 //	commit hash, commit time, [builder,] status, pass duration, fail duration
@@ -13,18 +21,22 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
 
 	bbpb "go.chromium.org/luci/buildbucket/proto"
+	bbgrpcpb "go.chromium.org/luci/buildbucket/proto/grpcpb"
 	"go.chromium.org/luci/common/api/gitiles"
 	gpb "go.chromium.org/luci/common/proto/gitiles"
 	"go.chromium.org/luci/grpc/prpc"
@@ -34,16 +46,20 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-const resultDBHost = "results.api.cr.dev"
-const crBuildBucketHost = "cr-buildbucket.appspot.com"
-const gitilesHost = "go.googlesource.com"
+const (
+	resultDBHost      = "results.api.luci.app"
+	oldResultDBHost   = "results.api.cr.dev"
+	crBuildBucketHost = "cr-buildbucket.appspot.com"
+	gitilesHost       = "go.googlesource.com"
+	gerritHost        = "go-review.googlesource.com"
+)
 
 // LUCIClient is a LUCI client.
 type LUCIClient struct {
 	HTTPClient     *http.Client
 	GitilesClient  gpb.GitilesClient
-	BuildsClient   bbpb.BuildsClient
-	BuildersClient bbpb.BuildersClient
+	BuildsClient   bbgrpcpb.BuildsClient
+	BuildersClient bbgrpcpb.BuildersClient
 	ResultDBClient rdbpb.ResultDBClient
 
 	// TraceSteps controls whether to log each step name as it's executed.
@@ -63,11 +79,11 @@ func NewLUCIClient(nProc int) *LUCIClient {
 	if err != nil {
 		log.Fatal(err)
 	}
-	buildsClient := bbpb.NewBuildsClient(&prpc.Client{
+	buildsClient := bbgrpcpb.NewBuildsClient(&prpc.Client{
 		C:    c,
 		Host: crBuildBucketHost,
 	})
-	buildersClient := bbpb.NewBuildersClient(&prpc.Client{
+	buildersClient := bbgrpcpb.NewBuildersClient(&prpc.Client{
 		C:    c,
 		Host: crBuildBucketHost,
 	})
@@ -160,7 +176,8 @@ nextPage:
 		PageToken:  pageToken,
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("GitilesClient.Log(%q, %q) failed: %v; falling back to Gerrit", repo, branch, err)
+		return c.listCommitsFromGerrit(ctx, repo, branch, since)
 	}
 	for _, c := range resp.GetLog() {
 		commitTime := c.GetCommitter().GetTime().AsTime()
@@ -177,6 +194,61 @@ nextPage:
 		goto nextPage
 	}
 done:
+	return commits
+}
+
+func (c *LUCIClient) listCommitsFromGerrit(ctx context.Context, repo, branch string, since time.Time) []Commit {
+	var commits []Commit
+	after := since.Add(-24 * time.Hour).UTC().Format("2006-01-02")
+	for start := 0; ; {
+		u := fmt.Sprintf("https://%s/changes/?q=project:%s+branch:%s+status:merged+mergedafter:%s&o=CURRENT_REVISION&n=500&S=%d",
+			gerritHost, url.QueryEscape(repo), url.QueryEscape(branch), after, start)
+		req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		resp, err := c.HTTPClient.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			log.Fatalf("GET %s: %s\n%s", u, resp.Status, body)
+		}
+		body = bytes.TrimPrefix(body, []byte(")]}'\n"))
+		var changes []struct {
+			CurrentRevision string `json:"current_revision"`
+			Submitted       string `json:"submitted"`
+			MoreChanges     bool   `json:"_more_changes"`
+		}
+		if err := json.Unmarshal(body, &changes); err != nil {
+			log.Fatal(err)
+		}
+		for _, ch := range changes {
+			commitTime, err := time.Parse("2006-01-02 15:04:05.000000000", ch.Submitted)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if commitTime.Before(since) {
+				continue
+			}
+			commits = append(commits, Commit{
+				Hash: ch.CurrentRevision,
+				Time: commitTime,
+			})
+		}
+		if len(changes) == 0 || !changes[len(changes)-1].MoreChanges {
+			break
+		}
+		start += len(changes)
+	}
+	slices.SortFunc(commits, func(a, b Commit) int {
+		return b.Time.Compare(a.Time)
+	})
 	return commits
 }
 
@@ -325,7 +397,7 @@ func (c *LUCIClient) ReadBoard(ctx context.Context, dash *Dashboard, builder str
 					}
 				}
 				rdb := b.GetInfra().GetResultdb()
-				if rdb.GetHostname() != resultDBHost {
+				if rdb.GetHostname() != resultDBHost && rdb.GetHostname() != oldResultDBHost {
 					log.Fatalf("ResultDB host mismatch: %s %s %s", rdb.GetHostname(), resultDBHost, buildURL(id))
 				}
 				if b.GetBuilder().GetBuilder() != bName { // sanity check
@@ -435,7 +507,9 @@ func main() {
 	// LUCI keeps data up to 60 days, so there is no point to go back farther
 	startTime := time.Now().Add(-60 * 24 * time.Hour)
 	dash := &Dashboard{Project: Project{*repo, *branch}}
-	c.ReadBoard(ctx, dash, *builder, startTime)
+	if err := c.ReadBoard(ctx, dash, *builder, startTime); err != nil {
+		log.Fatal(err)
+	}
 
 	printBuilder := func(string) {}
 	if len(dash.Builders) > 1 {
