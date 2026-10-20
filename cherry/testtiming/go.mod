@@ -1,6 +1,6 @@
 module golang.org/x/scratch/cherry/testtiming
 
-go 1.22
+go 1.24
 
 require (
 	go.chromium.org/luci v0.0.0-20240716011143-b5eb7a221b66
@@ -12,7 +12,7 @@ require (
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
