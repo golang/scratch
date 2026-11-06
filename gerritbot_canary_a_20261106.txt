@@ -1,0 +1,2 @@
+Reporter-owned GerritBot Change-Id isolation canary A.
+No executable content. Do not merge.
